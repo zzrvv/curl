@@ -9,7 +9,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2018, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -154,9 +154,6 @@ touch src/tool_hugehelp.c
 
 ############################################################################
 #
-# Update the IDE files
-echo "make vc-ide"
-make -s vc-ide
 
 echo "produce CHANGES"
 git log --pretty=fuller --no-color --date=short --decorate=full -1000 | ./scripts/log2changes.pl > CHANGES.dist
