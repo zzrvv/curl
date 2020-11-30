@@ -1,7 +1,7 @@
 Long: create-file-mode
 Help: File mode for created files
 Protocols: SFTP SCP FILE
-Category: sftp scp file
+Category: sftp scp file upload
 See-also: ftp-create-dirs
 Added: 7.75.0
 ---
