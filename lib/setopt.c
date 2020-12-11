@@ -865,7 +865,7 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
       ;
     else
 #endif
-#ifndef USE_NGHTTP2
+#if !defined(USE_NGHTTP2) && !defined(USE_HYPER)
     if(arg >= CURL_HTTP_VERSION_2)
       return CURLE_UNSUPPORTED_PROTOCOL;
 #else
