@@ -118,6 +118,14 @@ typedef ssize_t (Curl_recv)(struct connectdata *conn, /* connection data */
                             size_t len,               /* max amount to read */
                             CURLcode *err);           /* error to return */
 
+#ifdef USE_HYPER
+typedef CURLcode (*Curl_datastream)(struct Curl_easy *data,
+                                    struct connectdata *conn,
+                                    int *didwhat,
+                                    bool *done,
+                                    int select_res);
+#endif
+
 #include "mime.h"
 #include "imap.h"
 #include "pop3.h"
@@ -132,6 +140,7 @@ typedef ssize_t (Curl_recv)(struct connectdata *conn, /* connection data */
 #include "wildcard.h"
 #include "multihandle.h"
 #include "quic.h"
+#include "c-hyper.h"
 
 #ifdef HAVE_GSSAPI
 # ifdef HAVE_GSSGNU
@@ -1112,6 +1121,10 @@ struct connectdata {
 #ifdef USE_UNIX_SOCKETS
   char *unix_domain_socket;
 #endif
+#ifdef USE_HYPER
+  /* if set, an alternative data transfer function */
+  Curl_datastream datastream;
+#endif
 };
 
 /* The end of connectdata. */
@@ -1205,17 +1218,6 @@ struct Progress {
   BIT(callback);  /* set when progress callback is used */
   BIT(is_t_startransfer_set);
 };
-
-typedef enum {
-  HTTPREQ_NONE, /* first in list */
-  HTTPREQ_GET,
-  HTTPREQ_POST,
-  HTTPREQ_POST_FORM, /* we make a difference internally */
-  HTTPREQ_POST_MIME, /* we make a difference internally */
-  HTTPREQ_PUT,
-  HTTPREQ_HEAD,
-  HTTPREQ_LAST /* last in list */
-} Curl_HttpReq;
 
 typedef enum {
     RTSPREQ_NONE, /* first in list */
@@ -1406,6 +1408,9 @@ struct UrlState {
 #endif
   trailers_state trailers_state; /* whether we are sending trailers
                                        and what stage are we at */
+#ifdef USE_HYPER
+  CURLcode hresult; /* used to pass return codes back from hyper callbacks */
+#endif
 
   /* Dynamically allocated strings, MUST be freed before this struct is
      killed. */
@@ -1569,7 +1574,6 @@ enum dupstring {
   STRING_ALTSVC,                /* CURLOPT_ALTSVC */
   STRING_HSTS,                  /* CURLOPT_HSTS */
   STRING_SASL_AUTHZID,          /* CURLOPT_SASL_AUTHZID */
-  STRING_TEMP_URL,              /* temp URL storage for proxy use */
   STRING_DNS_SERVERS,
   STRING_DNS_INTERFACE,
   STRING_DNS_LOCAL_IP4,
@@ -1934,6 +1938,9 @@ struct Curl_easy {
   iconv_t inbound_cd;          /* for translating from the network encoding */
   iconv_t utf8_cd;             /* for translating to UTF8 */
 #endif /* CURL_DOES_CONVERSIONS && HAVE_ICONV */
+#ifdef USE_HYPER
+  struct hyptransfer hyp;
+#endif
   unsigned int magic;          /* set to a CURLEASY_MAGIC_NUMBER */
 };
 

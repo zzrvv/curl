@@ -33,3 +33,9 @@ Build curl to use hyper's C API:
      % ./buildconf
      % ./configure --with-hyper=<hyper dir>
      % make
+
+## TODO
+
+1. `--without-nghttp2` is still necesaru to make configure not use nghttp2
+  in the build since it serves no use together with Hyper.
+
