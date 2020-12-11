@@ -2672,7 +2672,7 @@ CURLcode Curl_http_range(struct Curl_easy *data,
       /* if a line like this was already allocated, free the previous one */
       free(data->state.aptr.rangeline);
       data->state.aptr.rangeline = aprintf("Range: bytes=%s\r\n",
-                                         data->state.range);
+                                           data->state.range);
     }
     else if((httpreq == HTTPREQ_POST || httpreq == HTTPREQ_PUT) &&
             !Curl_checkheaders(conn, "Content-Range")) {
