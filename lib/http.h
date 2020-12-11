@@ -101,6 +101,9 @@ CURLcode Curl_http_cookies(struct Curl_easy *data,
 #else
 #define Curl_http_cookies(a,b,c) CURLE_OK
 #endif
+CURLcode Curl_http_resume(struct Curl_easy *data,
+                          struct connectdata *conn,
+                          Curl_HttpReq httpreq);
 CURLcode Curl_http_range(struct Curl_easy *data,
                          struct connectdata *conn,
                          Curl_HttpReq httpreq);

@@ -2714,6 +2714,86 @@ CURLcode Curl_http_range(struct Curl_easy *data,
   return CURLE_OK;
 }
 
+CURLcode Curl_http_resume(struct Curl_easy *data,
+                          struct connectdata *conn,
+                          Curl_HttpReq httpreq)
+{
+  if((HTTPREQ_POST == httpreq || HTTPREQ_PUT == httpreq) &&
+     data->state.resume_from) {
+    /**********************************************************************
+     * Resuming upload in HTTP means that we PUT or POST and that we have
+     * got a resume_from value set. The resume value has already created
+     * a Range: header that will be passed along. We need to "fast forward"
+     * the file the given number of bytes and decrease the assume upload
+     * file size before we continue this venture in the dark lands of HTTP.
+     * Resuming mime/form posting at an offset > 0 has no sense and is ignored.
+     *********************************************************************/
+
+    if(data->state.resume_from < 0) {
+      /*
+       * This is meant to get the size of the present remote-file by itself.
+       * We don't support this now. Bail out!
+       */
+      data->state.resume_from = 0;
+    }
+
+    if(data->state.resume_from && !data->state.this_is_a_follow) {
+      /* do we still game? */
+
+      /* Now, let's read off the proper amount of bytes from the
+         input. */
+      int seekerr = CURL_SEEKFUNC_CANTSEEK;
+      if(conn->seek_func) {
+        Curl_set_in_callback(data, true);
+        seekerr = conn->seek_func(conn->seek_client, data->state.resume_from,
+                                  SEEK_SET);
+        Curl_set_in_callback(data, false);
+      }
+
+      if(seekerr != CURL_SEEKFUNC_OK) {
+        curl_off_t passed = 0;
+
+        if(seekerr != CURL_SEEKFUNC_CANTSEEK) {
+          failf(data, "Could not seek stream");
+          return CURLE_READ_ERROR;
+        }
+        /* when seekerr == CURL_SEEKFUNC_CANTSEEK (can't seek to offset) */
+        do {
+          size_t readthisamountnow =
+            (data->state.resume_from - passed > data->set.buffer_size) ?
+            (size_t)data->set.buffer_size :
+            curlx_sotouz(data->state.resume_from - passed);
+
+          size_t actuallyread =
+            data->state.fread_func(data->state.buffer, 1, readthisamountnow,
+                                   data->state.in);
+
+          passed += actuallyread;
+          if((actuallyread == 0) || (actuallyread > readthisamountnow)) {
+            /* this checks for greater-than only to make sure that the
+               CURL_READFUNC_ABORT return code still aborts */
+            failf(data, "Could only read %" CURL_FORMAT_CURL_OFF_T
+                  " bytes from the input", passed);
+            return CURLE_READ_ERROR;
+          }
+        } while(passed < data->state.resume_from);
+      }
+
+      /* now, decrease the size of the read */
+      if(data->state.infilesize>0) {
+        data->state.infilesize -= data->state.resume_from;
+
+        if(data->state.infilesize <= 0) {
+          failf(data, "File already completely uploaded");
+          return CURLE_PARTIAL_FILE;
+        }
+      }
+      /* we've passed, proceed as normal */
+    }
+  }
+  return CURLE_OK;
+}
+
 #ifndef USE_HYPER
 /*
  * Curl_http() gets called from the generic multi_do() function when a HTTP
@@ -2879,79 +2959,9 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
 
   p_accept = Curl_checkheaders(conn, "Accept")?NULL:"Accept: */*\r\n";
 
-  if((HTTPREQ_POST == httpreq || HTTPREQ_PUT == httpreq) &&
-     data->state.resume_from) {
-    /**********************************************************************
-     * Resuming upload in HTTP means that we PUT or POST and that we have
-     * got a resume_from value set. The resume value has already created
-     * a Range: header that will be passed along. We need to "fast forward"
-     * the file the given number of bytes and decrease the assume upload
-     * file size before we continue this venture in the dark lands of HTTP.
-     * Resuming mime/form posting at an offset > 0 has no sense and is ignored.
-     *********************************************************************/
-
-    if(data->state.resume_from < 0) {
-      /*
-       * This is meant to get the size of the present remote-file by itself.
-       * We don't support this now. Bail out!
-       */
-      data->state.resume_from = 0;
-    }
-
-    if(data->state.resume_from && !data->state.this_is_a_follow) {
-      /* do we still game? */
-
-      /* Now, let's read off the proper amount of bytes from the
-         input. */
-      int seekerr = CURL_SEEKFUNC_CANTSEEK;
-      if(conn->seek_func) {
-        Curl_set_in_callback(data, true);
-        seekerr = conn->seek_func(conn->seek_client, data->state.resume_from,
-                                  SEEK_SET);
-        Curl_set_in_callback(data, false);
-      }
-
-      if(seekerr != CURL_SEEKFUNC_OK) {
-        curl_off_t passed = 0;
-
-        if(seekerr != CURL_SEEKFUNC_CANTSEEK) {
-          failf(data, "Could not seek stream");
-          return CURLE_READ_ERROR;
-        }
-        /* when seekerr == CURL_SEEKFUNC_CANTSEEK (can't seek to offset) */
-        do {
-          size_t readthisamountnow =
-            (data->state.resume_from - passed > data->set.buffer_size) ?
-            (size_t)data->set.buffer_size :
-            curlx_sotouz(data->state.resume_from - passed);
-
-          size_t actuallyread =
-            data->state.fread_func(data->state.buffer, 1, readthisamountnow,
-                                   data->state.in);
-
-          passed += actuallyread;
-          if((actuallyread == 0) || (actuallyread > readthisamountnow)) {
-            /* this checks for greater-than only to make sure that the
-               CURL_READFUNC_ABORT return code still aborts */
-            failf(data, "Could only read %" CURL_FORMAT_CURL_OFF_T
-                  " bytes from the input", passed);
-            return CURLE_READ_ERROR;
-          }
-        } while(passed < data->state.resume_from);
-      }
-
-      /* now, decrease the size of the read */
-      if(data->state.infilesize>0) {
-        data->state.infilesize -= data->state.resume_from;
-
-        if(data->state.infilesize <= 0) {
-          failf(data, "File already completely uploaded");
-          return CURLE_PARTIAL_FILE;
-        }
-      }
-      /* we've passed, proceed as normal */
-    }
-  }
+  result = Curl_http_resume(data, conn, httpreq);
+  if(result)
+    return result;
 
   result = Curl_http_range(data, conn, httpreq);
   if(result)
