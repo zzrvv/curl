@@ -773,7 +773,9 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
      Curl_hyper_header(data, headers, data->state.aptr.rangeline))
     goto error;
 
-  if(data->state.aptr.uagent &&
+  if(data->set.str[STRING_USERAGENT] &&
+     *data->set.str[STRING_USERAGENT] &&
+     data->state.aptr.uagent &&
      Curl_hyper_header(data, headers, data->state.aptr.uagent))
     goto error;
 
