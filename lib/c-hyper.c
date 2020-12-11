@@ -657,6 +657,10 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
       return result;
   }
 
+  result = Curl_http_resume(data, conn, httpreq);
+  if(result)
+    return result;
+
   result = Curl_http_range(data, conn, httpreq);
   if(result)
     return result;
