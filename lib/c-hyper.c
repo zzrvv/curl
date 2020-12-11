@@ -171,7 +171,7 @@ static int hyper_body_chunk(void *userdata, const hyper_buf *chunk)
   struct SingleRequest *k = &data->req;
   size_t wrote;
 
-  if((0 == k->bodywrites++) && k->newurl) {
+  if(0 == k->bodywrites++) {
 #if 0
     if(conn->bits.close) {
       /* Abort after the headers if "follow Location" is set and we're set
@@ -179,11 +179,20 @@ static int hyper_body_chunk(void *userdata, const hyper_buf *chunk)
       return CURLE_OK;
     }
 #endif
-    /* We have a new url to load, but since we want to be able
-       to re-use this connection properly, we read the full
-       response in "ignore more" */
-    k->ignorebody = TRUE;
-    infof(data, "Ignoring the response-body\n");
+    bool done = FALSE;
+    CURLcode result = Curl_http_firstwrite(data, data->conn, &done);
+    if(result || done) {
+      infof(data, "Returns ERROR from hyper_body_chunk\n");
+      data->state.hresult = result;
+      return HYPER_ITER_ERROR;
+    }
+    if(k->newurl) {
+      /* We have a new url to load, but since we want to be able
+         to re-use this connection properly, we read the full
+         response in "ignore more" */
+      k->ignorebody = TRUE;
+      infof(data, "Ignoring the response-body\n");
+    }
   }
   if(k->ignorebody)
     return HYPER_ITER_CONTINUE;
