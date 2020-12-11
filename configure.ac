@@ -3992,7 +3992,7 @@ dnl Check for Hyper
 dnl **********************************************************************
 
 OPT_HYPER="yes"
-curl_hyper_msg="no      (--with-hyper)"
+curl_h1_msg="enabled (--with-hyper)"
 
 if test "x$disable_http" = "xyes"; then
   # without HTTP, hyper is of no use
@@ -4061,7 +4061,8 @@ if test X"$want_hyper" != Xno; then
        AC_CHECK_HEADERS(hyper.h,
           experimental="$experimental Hyper"
           AC_MSG_NOTICE([Hyper support is experimental])
-          curl_hyper_msg="enabled"
+          curl_h1_msg="enabled (Hyper)"
+          curl_h2_msg=$curl_h1_msg
           HYPER_ENABLED=1
           AC_DEFINE(USE_HYPER, 1, [if hyper is in use])
           AC_SUBST(USE_HYPER, [1])
@@ -5354,10 +5355,10 @@ AC_MSG_NOTICE([Configured to build curl/libcurl:
   Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
+  HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
   ECH:              ${curl_ech_msg}
-  Hyper:            ${curl_hyper_msg}
   Protocols:        ${SUPPORT_PROTOCOLS}
   Features:         ${SUPPORT_FEATURES}
 ])
