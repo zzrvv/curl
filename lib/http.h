@@ -107,6 +107,9 @@ CURLcode Curl_http_resume(struct Curl_easy *data,
 CURLcode Curl_http_range(struct Curl_easy *data,
                          struct connectdata *conn,
                          Curl_HttpReq httpreq);
+CURLcode Curl_http_firstwrite(struct Curl_easy *data,
+                              struct connectdata *conn,
+                              bool *done);
 
 /* protocol-specific functions set up to be called by the main engine */
 CURLcode Curl_http(struct connectdata *conn, bool *done);
